@@ -1,5 +1,7 @@
 package main
 
+import "github.com/justanoobcoder/tmux-mgr/cmd"
+
 func main() {
-	println("Hello, World!")
+	cmd.Execute()
 }
