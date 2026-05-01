@@ -44,3 +44,32 @@ func (m *Manager) AddProject(path string) error {
 
 	return nil
 }
+
+func (m *Manager) RemoveConfigPath(path string) error {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("resolve path: %w", err)
+	}
+	cleanPath := filepath.Clean(absPath)
+
+	removed := false
+
+	var newProjects []string
+	for _, p := range m.cfg.Projects {
+		if p == cleanPath {
+			removed = true
+		} else {
+			newProjects = append(newProjects, p)
+		}
+	}
+	m.cfg.Projects = newProjects
+
+	if !removed {
+		return fmt.Errorf("path not found in config: %s", cleanPath)
+	}
+
+	if err := config.Save(m.cfg); err != nil {
+		return fmt.Errorf("save config: %w", err)
+	}
+	return nil
+}
