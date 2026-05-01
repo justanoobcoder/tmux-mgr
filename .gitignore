@@ -1,0 +1,5 @@
+.envrc
+devenv.*
+.devenv/
+
+**/tmux-mgr
