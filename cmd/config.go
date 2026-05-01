@@ -42,6 +42,8 @@ func configShowRun(cmd *cobra.Command, args []string) error {
 	for _, p := range cfg.Projects {
 		fmt.Printf("  - %s\n", p)
 	}
+	fmt.Printf("Tmux.SessionPrefix: %s\n", cfg.Tmux.SessionPrefix)
+	fmt.Printf("Tmux.AttachOnCreate: %v\n", cfg.Tmux.AttachOnCreate)
 
 	return nil
 }

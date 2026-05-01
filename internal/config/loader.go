@@ -20,6 +20,8 @@ func Load() (*Config, error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("json")
 
+	viper.SetDefault("tmux.attach_on_create", true)
+
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, fmt.Errorf("read config: %w", err)
