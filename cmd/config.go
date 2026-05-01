@@ -16,6 +16,10 @@ var configCmd = &cobra.Command{
 func configInitRun(cmd *cobra.Command, args []string) error {
 	cfg := &config.Config{
 		Projects: []string{},
+		Tmux: config.TmuxConfig{
+			SessionPrefix:  "",
+			AttachOnCreate: true,
+		},
 	}
 
 	if err := config.Save(cfg); err != nil {
