@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/justanoobcoder/tmux-mgr/internal/config"
 	"github.com/justanoobcoder/tmux-mgr/internal/service"
+	"github.com/justanoobcoder/tmux-mgr/internal/tmux"
 	"github.com/justanoobcoder/tmux-mgr/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -40,7 +41,10 @@ func projectsRun(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	return nil
+	tmuxClient := tmux.NewClient()
+	launcher := service.NewLauncher(tmuxClient, &cfg.Tmux)
+
+	return launcher.Launch(*selected)
 }
 
 var projectsCmd = &cobra.Command{
