@@ -106,7 +106,7 @@ func (m *Manager) AddFolder(path string, excludes []string) error {
 	return nil
 }
 
-func (m *Manager) GetProjects() []domain.Project {
+func (m *Manager) GetProjects() ([]domain.Project, error) {
 	projectMap := make(map[string]bool)
 	var projects []domain.Project
 
@@ -117,9 +117,11 @@ func (m *Manager) GetProjects() []domain.Project {
 		}
 	}
 
+	var errs []error
 	for _, f := range m.cfg.Folders {
 		entries, err := os.ReadDir(f.Path)
 		if err != nil {
+			errs = append(errs, fmt.Errorf("read folder %s: %w", f.Path, err))
 			continue
 		}
 
@@ -149,7 +151,11 @@ func (m *Manager) GetProjects() []domain.Project {
 		return projects[i].Path < projects[j].Path
 	})
 
-	return projects
+	if len(errs) > 0 {
+		return projects, fmt.Errorf("some folders could not be read: %v", errs)
+	}
+
+	return projects, nil
 }
 
 func (m *Manager) DeleteSession(name string) error {

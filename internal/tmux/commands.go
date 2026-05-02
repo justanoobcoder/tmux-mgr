@@ -19,7 +19,7 @@ func (c *Client) NewSession(name, startDir string) error {
 func (c *Client) ListSessions() ([]string, string, error) {
 	out, err := c.Run("list-sessions", "-F", "#{session_name} #{session_last_attached}")
 	if err != nil {
-		return nil, "", nil
+		return nil, "", fmt.Errorf("list tmux sessions: %w", err)
 	}
 
 	lines := strings.Split(strings.TrimSpace(out), "\n")
@@ -55,7 +55,9 @@ func (c *Client) KillSession(name string) error {
 }
 
 func (c *Client) RestoreResurrect() error {
-	c.Run("start-server")
+	if _, err := c.Run("start-server"); err != nil {
+		return fmt.Errorf("start tmux server: %w", err)
+	}
 
 	out, err := c.Run("list-keys")
 	if err != nil {

@@ -3,22 +3,21 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/justanoobcoder/tmux-mgr/internal/config"
 	"github.com/justanoobcoder/tmux-mgr/internal/service"
 	"github.com/spf13/cobra"
 )
 
 func removeRun(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return err
 	}
 
 	manager := service.NewManager(cfg, nil)
 
 	path := args[0]
 	if err := manager.RemoveConfigPath(path); err != nil {
-		return err
+		return fmt.Errorf("remove path: %w", err)
 	}
 
 	fmt.Printf("Successfully removed '%s' from configuration.\n", path)

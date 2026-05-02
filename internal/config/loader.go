@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,53 +10,65 @@ import (
 	"github.com/spf13/viper"
 )
 
-func GetConfigFilePath() string {
+var ErrConfigNotFound = errors.New("config file not found")
+
+func GetConfigFilePath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not get home directory: %v\n", err)
-		os.Exit(1)
+		return "", fmt.Errorf("get home directory: %w", err)
 	}
-
-	return filepath.Join(home, ".config", "tmux-mgr", "config.json")
+	return filepath.Join(home, ".config", "tmux-mgr", "config.json"), nil
 }
 
-func ConfigExists() bool {
-	config := GetConfigFilePath()
-	_, err := os.Stat(config)
+func ConfigExists() (bool, error) {
+	configPath, err := GetConfigFilePath()
+	if err != nil {
+		return false, err
+	}
+	_, err = os.Stat(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return false
+			return false, nil
 		}
-		fmt.Fprintf(os.Stderr, "Error checking for config file: %v\n", err)
-		os.Exit(1)
+		return false, fmt.Errorf("check config file: %w", err)
 	}
-	return true
+	return true, nil
 }
 
-func GetResurrectSaveDir() string {
+func GetResurrectSaveDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not get home directory: %v\n", err)
-		os.Exit(1)
+		return "", fmt.Errorf("get home directory: %w", err)
 	}
-
-	return filepath.Join(home, ".tmux", "resurrect")
+	return filepath.Join(home, ".tmux", "resurrect"), nil
 }
 
 func Load() (*Config, error) {
-	if !ConfigExists() {
-		fmt.Fprintf(os.Stderr, "Config file does not exist.\n")
-		os.Exit(1)
+	exists, err := ConfigExists()
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrConfigNotFound
 	}
 
-	configDir := GetConfigFilePath()
-	viper.AddConfigPath(configDir)
+	configPath, err := GetConfigFilePath()
+	if err != nil {
+		return nil, err
+	}
+
+	saveDir, err := GetResurrectSaveDir()
+	if err != nil {
+		return nil, err
+	}
+
+	viper.AddConfigPath(configPath)
 	viper.SetConfigName("config")
 	viper.SetConfigType("json")
 
 	viper.SetDefault("tmux.attach_on_create", true)
 	viper.SetDefault("resurrect.enabled", true)
-	viper.SetDefault("resurrect.save_dir", GetResurrectSaveDir())
+	viper.SetDefault("resurrect.save_dir", saveDir)
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {

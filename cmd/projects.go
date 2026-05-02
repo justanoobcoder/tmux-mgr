@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/justanoobcoder/tmux-mgr/internal/config"
 	"github.com/justanoobcoder/tmux-mgr/internal/resurrect"
 	"github.com/justanoobcoder/tmux-mgr/internal/service"
 	"github.com/justanoobcoder/tmux-mgr/internal/tmux"
@@ -13,15 +12,18 @@ import (
 )
 
 func projectsRun(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return err
 	}
 
 	store := resurrect.NewStore(cfg.Resurrect.SaveDir)
 	manager := service.NewManager(cfg, store)
 
-	projects := manager.GetProjects()
+	projects, err := manager.GetProjects()
+	if err != nil {
+		fmt.Printf("Warning: %v\n", err)
+	}
 
 	m := ui.NewProjectPickerModel(projects)
 	p := tea.NewProgram(m)

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/justanoobcoder/tmux-mgr/internal/config"
 	"github.com/justanoobcoder/tmux-mgr/internal/domain"
 	"github.com/justanoobcoder/tmux-mgr/internal/resurrect"
 	"github.com/justanoobcoder/tmux-mgr/internal/service"
@@ -14,9 +13,9 @@ import (
 )
 
 func sessionsRun(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return err
 	}
 
 	if !cfg.Resurrect.Enabled {
@@ -31,7 +30,11 @@ func sessionsRun(cmd *cobra.Command, args []string) error {
 	sessionMap := make(map[string]*domain.DisplaySession)
 	var sessionNames []string
 
-	activeSessions, lastActive, _ := tmuxClient.ListSessions()
+	activeSessions, lastActive, err := tmuxClient.ListSessions()
+	if err != nil {
+		fmt.Printf("Warning: failed to list active sessions: %v\n", err)
+	}
+
 	for _, name := range activeSessions {
 		sessionMap[name] = &domain.DisplaySession{
 			Name:         name,
@@ -41,7 +44,10 @@ func sessionsRun(cmd *cobra.Command, args []string) error {
 		sessionNames = append(sessionNames, name)
 	}
 
-	savedSessions, lastSaved, _ := store.ListSessions()
+	savedSessions, lastSaved, err := store.ListSessions()
+	if err != nil {
+		fmt.Printf("Warning: failed to list saved sessions: %v\n", err)
+	}
 	for _, sess := range savedSessions {
 		if ds, exists := sessionMap[sess.Name]; exists {
 			ds.IsSaved = true
@@ -94,7 +100,7 @@ func sessionsRun(cmd *cobra.Command, args []string) error {
 
 		if m.ToDelete.IsActive {
 			if err := tmuxClient.KillSession(m.ToDelete.Name); err != nil {
-				fmt.Printf("Failed to kill active tmux session '%s': %v\n", m.ToDelete.Name, err)
+				return fmt.Errorf("kill tmux session '%s': %w", m.ToDelete.Name, err)
 			}
 		}
 

@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/justanoobcoder/tmux-mgr/internal/config"
 	"github.com/spf13/cobra"
@@ -15,12 +17,34 @@ var configCmd = &cobra.Command{
 	Long:  "Commands to initialize and view the configuration file located at ~/.config/tmux-mgr/config.json",
 }
 
+func loadConfig() (*config.Config, error) {
+	cfg, err := config.Load()
+	if err != nil {
+		if errors.Is(err, config.ErrConfigNotFound) {
+			fmt.Fprintln(os.Stderr, "Error: config file not found; run 'tmux-mgr config init' to create one")
+			configInitCmd.Help()
+			os.Exit(1)
+		}
+		return nil, err
+	}
+	return cfg, nil
+}
+
 func configInitRun(cmd *cobra.Command, args []string) error {
 	if !force {
-		if config.ConfigExists() {
+		exists, err := config.ConfigExists()
+		if err != nil {
+			return err
+		}
+		if exists {
 			fmt.Println("Config file already exists (use --force to overwrite)")
 			return nil
 		}
+	}
+
+	resurrectSaveDir, err := config.GetResurrectSaveDir()
+	if err != nil {
+		return err
 	}
 
 	cfg := &config.Config{
@@ -32,7 +56,7 @@ func configInitRun(cmd *cobra.Command, args []string) error {
 		},
 		Resurrect: config.ResurrectConfig{
 			Enabled: true,
-			SaveDir: config.GetResurrectSaveDir(),
+			SaveDir: resurrectSaveDir,
 		},
 	}
 
@@ -51,7 +75,7 @@ var configInitCmd = &cobra.Command{
 }
 
 func configShowRun(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}

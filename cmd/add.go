@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/justanoobcoder/tmux-mgr/internal/config"
 	"github.com/justanoobcoder/tmux-mgr/internal/resurrect"
 	"github.com/justanoobcoder/tmux-mgr/internal/service"
 	"github.com/spf13/cobra"
@@ -16,33 +15,33 @@ var (
 )
 
 func addRun(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load()
-		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
-		}
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
 
-		store := resurrect.NewStore(cfg.Resurrect.SaveDir)
-		manager := service.NewManager(cfg, store)
+	store := resurrect.NewStore(cfg.Resurrect.SaveDir)
+	manager := service.NewManager(cfg, store)
 
-		path := "."
-		if len(args) > 0 {
-			path = args[0]
-		}
+	path := "."
+	if len(args) > 0 {
+		path = args[0]
+	}
 
-		if addFolderFlag {
-			if err := manager.AddFolder(path, addExcludeFlags); err != nil {
-				return fmt.Errorf("add folder: %w", err)
-			}
-			absPath, _ := filepath.Abs(path)
-			fmt.Printf("Added folder: %s (excludes: %v)\n", filepath.Clean(absPath), addExcludeFlags)
-		} else {
-			if err := manager.AddProject(path); err != nil {
-				return fmt.Errorf("add project: %w", err)
-			}
-			absPath, _ := filepath.Abs(path)
-			fmt.Printf("Added project: %s\n", filepath.Clean(absPath))
+	if addFolderFlag {
+		if err := manager.AddFolder(path, addExcludeFlags); err != nil {
+			return fmt.Errorf("add folder: %w", err)
 		}
-		return nil
+		absPath, _ := filepath.Abs(path)
+		fmt.Printf("Added folder: %s (excludes: %v)\n", filepath.Clean(absPath), addExcludeFlags)
+	} else {
+		if err := manager.AddProject(path); err != nil {
+			return fmt.Errorf("add project: %w", err)
+		}
+		absPath, _ := filepath.Abs(path)
+		fmt.Printf("Added project: %s\n", filepath.Clean(absPath))
+	}
+	return nil
 }
 
 var addCmd = &cobra.Command{
