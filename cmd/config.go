@@ -20,6 +20,9 @@ func configInitRun(cmd *cobra.Command, args []string) error {
 			SessionPrefix:  "",
 			AttachOnCreate: true,
 		},
+		Resurrect: config.ResurrectConfig{
+			Enabled: true,
+		},
 	}
 
 	if err := config.Save(cfg); err != nil {
@@ -48,6 +51,8 @@ func configShowRun(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Printf("Tmux.SessionPrefix: %s\n", cfg.Tmux.SessionPrefix)
 	fmt.Printf("Tmux.AttachOnCreate: %v\n", cfg.Tmux.AttachOnCreate)
+	fmt.Printf("Resurrect.Enabled: %v\n", cfg.Resurrect.Enabled)
+	fmt.Printf("Resurrect.SaveDir: %s\n", cfg.Resurrect.SaveDir)
 
 	return nil
 }

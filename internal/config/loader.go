@@ -21,6 +21,8 @@ func Load() (*Config, error) {
 	viper.SetConfigType("json")
 
 	viper.SetDefault("tmux.attach_on_create", true)
+	viper.SetDefault("resurrect.enabled", true)
+	viper.SetDefault("resurrect.save_dir", filepath.Join(home, ".tmux", "resurrect"))
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
