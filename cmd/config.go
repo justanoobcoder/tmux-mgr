@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/justanoobcoder/tmux-mgr/internal/config"
 	"github.com/spf13/cobra"
 )
+
+var force bool
 
 var configCmd = &cobra.Command{
 	Use:   "config",
@@ -16,6 +16,13 @@ var configCmd = &cobra.Command{
 }
 
 func configInitRun(cmd *cobra.Command, args []string) error {
+	if !force {
+		if config.ConfigExists() {
+			fmt.Println("Config file already exists (use --force to overwrite)")
+			return nil
+		}
+	}
+
 	cfg := &config.Config{
 		Projects: []string{},
 		Folders:  []config.FolderConfig{},
@@ -25,11 +32,9 @@ func configInitRun(cmd *cobra.Command, args []string) error {
 		},
 		Resurrect: config.ResurrectConfig{
 			Enabled: true,
+			SaveDir: config.GetResurrectSaveDir(),
 		},
 	}
-
-	home, _ := os.UserHomeDir()
-	cfg.Resurrect.SaveDir = filepath.Join(home, ".tmux", "resurrect")
 
 	if err := config.Save(cfg); err != nil {
 		return err
@@ -48,7 +53,7 @@ var configInitCmd = &cobra.Command{
 func configShowRun(cmd *cobra.Command, args []string) error {
 	cfg, err := config.Load()
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return err
 	}
 
 	fmt.Printf("Projects:\n")
@@ -75,6 +80,7 @@ var configShowCmd = &cobra.Command{
 }
 
 func init() {
+	configInitCmd.Flags().BoolVarP(&force, "force", "f", false, "Force overwrite of existing config file")
 	configCmd.AddCommand(configInitCmd)
 	configCmd.AddCommand(configShowCmd)
 
