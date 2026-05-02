@@ -14,7 +14,7 @@ func removeRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	manager := service.NewManager(cfg)
+	manager := service.NewManager(cfg, nil)
 
 	path := args[0]
 	if err := manager.RemoveConfigPath(path); err != nil {
@@ -26,12 +26,13 @@ func removeRun(cmd *cobra.Command, args []string) error {
 }
 
 var removeCmd = &cobra.Command{
-	Use:     "remove <path>",
-	Short:   "Remove a configured project",
-	Long:    `Remove a configured project from the configuration.`,
-	Example: `  tmux-mgr remove /path/to/project`,
-	Args:    cobra.ExactArgs(1),
-	RunE:    removeRun,
+	Use:   "remove <path>",
+	Short: "Remove a configured project",
+	Long:  `Remove a configured project from the configuration.`,
+	Example: `  tmux-mgr remove /path/to/project
+  tmux-mgr remove /path/to/workspace`,
+	Args: cobra.ExactArgs(1),
+	RunE: removeRun,
 }
 
 func init() {

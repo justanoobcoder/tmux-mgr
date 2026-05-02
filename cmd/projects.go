@@ -5,6 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/justanoobcoder/tmux-mgr/internal/config"
+	"github.com/justanoobcoder/tmux-mgr/internal/resurrect"
 	"github.com/justanoobcoder/tmux-mgr/internal/service"
 	"github.com/justanoobcoder/tmux-mgr/internal/tmux"
 	"github.com/justanoobcoder/tmux-mgr/internal/ui"
@@ -17,7 +18,8 @@ func projectsRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	manager := service.NewManager(cfg)
+	store := resurrect.NewStore(cfg.Resurrect.SaveDir)
+	manager := service.NewManager(cfg, store)
 
 	projects := manager.GetProjects()
 
@@ -41,8 +43,12 @@ func projectsRun(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	if err := manager.TrackProjectSelection(selected.Path); err != nil {
+		fmt.Printf("Warning: failed to track project selection: %v\n", err)
+	}
+
 	tmuxClient := tmux.NewClient()
-	launcher := service.NewLauncher(tmuxClient, &cfg.Tmux)
+	launcher := service.NewLauncher(tmuxClient, &cfg.Tmux, store)
 
 	return launcher.Launch(*selected)
 }

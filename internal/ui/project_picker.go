@@ -126,7 +126,6 @@ func (m *ProjectPickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Not filtering
 		switch msg.String() {
 		case "/":
 			m.filtering = true

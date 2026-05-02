@@ -25,7 +25,7 @@ func sessionsRun(cmd *cobra.Command, args []string) error {
 	}
 
 	store := resurrect.NewStore(cfg.Resurrect.SaveDir)
-	manager := service.NewManager(cfg)
+	manager := service.NewManager(cfg, store)
 	tmuxClient := tmux.NewClient()
 
 	sessionMap := make(map[string]*domain.DisplaySession)

@@ -8,8 +8,7 @@ import (
 )
 
 func rootRun(cmd *cobra.Command, args []string) error {
-	fmt.Println("run from root")
-	return nil
+	return projectsRun(cmd, args)
 }
 
 var rootCmd = &cobra.Command{

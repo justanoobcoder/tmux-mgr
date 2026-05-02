@@ -1,7 +1,14 @@
 package config
 
+type FolderConfig struct {
+	Path     string   `mapstructure:"path" json:"path"`
+	Excludes []string `mapstructure:"excludes" json:"excludes"`
+}
+
 type Config struct {
 	Projects  []string        `mapstructure:"projects" json:"projects"`
+	Folders   []FolderConfig  `mapstructure:"folders" json:"folders"`
+	Scores    map[string]int  `mapstructure:"scores" json:"scores"`
 	Tmux      TmuxConfig      `mapstructure:"tmux" json:"tmux"`
 	Resurrect ResurrectConfig `mapstructure:"resurrect" json:"resurrect"`
 }

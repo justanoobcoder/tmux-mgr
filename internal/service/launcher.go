@@ -5,16 +5,18 @@ import (
 
 	"github.com/justanoobcoder/tmux-mgr/internal/config"
 	"github.com/justanoobcoder/tmux-mgr/internal/domain"
+	"github.com/justanoobcoder/tmux-mgr/internal/resurrect"
 	"github.com/justanoobcoder/tmux-mgr/internal/tmux"
 )
 
 type Launcher struct {
 	tmuxClient *tmux.Client
 	config     *config.TmuxConfig
+	store      *resurrect.Store
 }
 
-func NewLauncher(client *tmux.Client, cfg *config.TmuxConfig) *Launcher {
-	return &Launcher{tmuxClient: client, config: cfg}
+func NewLauncher(client *tmux.Client, cfg *config.TmuxConfig, store *resurrect.Store) *Launcher {
+	return &Launcher{tmuxClient: client, config: cfg, store: store}
 }
 
 func (l *Launcher) Launch(p domain.Project) error {
@@ -22,6 +24,17 @@ func (l *Launcher) Launch(p domain.Project) error {
 
 	if !l.tmuxClient.HasSession(sessionName) {
 		isSaved := false
+		if l.store != nil {
+			savedSessions, _, err := l.store.ListSessions()
+			if err == nil {
+				for _, s := range savedSessions {
+					if s.Name == sessionName {
+						isSaved = true
+						break
+					}
+				}
+			}
+		}
 
 		if isSaved {
 			if err := l.tmuxClient.RestoreResurrect(); err != nil {
