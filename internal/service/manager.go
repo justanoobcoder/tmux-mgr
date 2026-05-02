@@ -8,10 +8,12 @@ import (
 
 	"github.com/justanoobcoder/tmux-mgr/internal/config"
 	"github.com/justanoobcoder/tmux-mgr/internal/domain"
+	"github.com/justanoobcoder/tmux-mgr/internal/resurrect"
 )
 
 type Manager struct {
-	cfg *config.Config
+	cfg   *config.Config
+	store *resurrect.Store
 }
 
 func NewManager(cfg *config.Config) *Manager {
@@ -114,6 +116,15 @@ func (m *Manager) RemoveProject(path string) error {
 
 	if err := config.Save(m.cfg); err != nil {
 		return fmt.Errorf("save config: %w", err)
+	}
+	return nil
+}
+
+func (m *Manager) DeleteSession(name string) error {
+	if m.store != nil {
+		if err := m.store.DeleteSession(name); err != nil {
+			return fmt.Errorf("delete session from resurrect: %w", err)
+		}
 	}
 	return nil
 }
