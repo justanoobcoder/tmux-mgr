@@ -4,17 +4,55 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/justanoobcoder/tmux-mgr/internal/config"
 	"github.com/spf13/cobra"
 )
 
 var force bool
+var editorFlag string
+
+func configRun(cmd *cobra.Command, args []string) error {
+	exists, err := config.ConfigExists()
+	if err != nil {
+		return err
+	}
+	if !exists {
+		fmt.Fprintln(os.Stderr, "Error: config file not found; run 'tmux-mgr config init' to create one")
+		configInitCmd.Help()
+		return nil
+	}
+
+	path, err := config.GetConfigFilePath()
+	if err != nil {
+		return err
+	}
+
+	editor := editorFlag
+	if editor == "" {
+		editor = os.Getenv("EDITOR")
+	}
+	if editor == "" {
+		return fmt.Errorf("$EDITOR is not set; use --editor <editor> to specify one")
+	}
+
+	editorCmd := exec.Command(editor, path)
+	editorCmd.Stdin = os.Stdin
+	editorCmd.Stdout = os.Stdout
+	editorCmd.Stderr = os.Stderr
+
+	if err := editorCmd.Run(); err != nil {
+		return fmt.Errorf("open editor: %w", err)
+	}
+	return nil
+}
 
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Manage tmux-mgr configuration",
-	Long:  "Commands to initialize and view the configuration file located at ~/.config/tmux-mgr/config.json",
+	Long:  "Commands to initialize and view the configuration file located at ~/.config/tmux-mgr/config.json.\nRunning this command without subcommands will open the config file in your $EDITOR.",
+	RunE:  configRun,
 }
 
 func loadConfig() (*config.Config, error) {
@@ -104,6 +142,7 @@ var configShowCmd = &cobra.Command{
 }
 
 func init() {
+	configCmd.Flags().StringVarP(&editorFlag, "editor", "e", "", "Editor to open config file with (overrides $EDITOR)")
 	configInitCmd.Flags().BoolVarP(&force, "force", "f", false, "Force overwrite of existing config file")
 	configCmd.AddCommand(configInitCmd)
 	configCmd.AddCommand(configShowCmd)
