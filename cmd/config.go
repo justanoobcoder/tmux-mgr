@@ -6,7 +6,10 @@ import (
 	"os"
 	"os/exec"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/justanoobcoder/tmux-mgr/internal/config"
+	"github.com/justanoobcoder/tmux-mgr/internal/service"
+	"github.com/justanoobcoder/tmux-mgr/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -46,6 +49,65 @@ func configRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("open editor: %w", err)
 	}
 	return nil
+}
+
+func configPruneRun(cmd *cobra.Command, args []string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+
+	manager := service.NewManager(cfg, nil)
+	deadPaths, err := manager.GetDeadPaths()
+	if err != nil {
+		return err
+	}
+
+	if len(deadPaths) == 0 {
+		fmt.Println("No dead paths found in configuration.")
+		return nil
+	}
+
+	var pathsToRemove []string
+
+	if force {
+		pathsToRemove = deadPaths
+	} else {
+		m := ui.NewPrunePickerModel(deadPaths)
+		p := tea.NewProgram(m)
+		if _, err := p.Run(); err != nil {
+			return fmt.Errorf("error running TUI: %w", err)
+		}
+
+		if !m.IsConfirmed() {
+			fmt.Println("Pruning cancelled.")
+			return nil
+		}
+		pathsToRemove = m.GetSelectedPaths()
+	}
+
+	if len(pathsToRemove) == 0 {
+		fmt.Println("No paths selected for removal.")
+		return nil
+	}
+
+	if err := manager.BulkRemoveConfigPaths(pathsToRemove); err != nil {
+		return fmt.Errorf("bulk remove paths: %w", err)
+	}
+
+	fmt.Printf("Successfully removed %d paths from configuration.\n", len(pathsToRemove))
+	for _, p := range pathsToRemove {
+		fmt.Printf("  - %s\n", p)
+	}
+
+	return nil
+}
+
+var configPruneCmd = &cobra.Command{
+	Use:   "prune",
+	Short: "Remove non-existent paths from configuration",
+	Long:  "Identifies projects and folders in the configuration that no longer exist on the filesystem and allows you to remove them.",
+	RunE:  configPruneRun,
 }
 
 var configCmd = &cobra.Command{
@@ -144,8 +206,10 @@ var configShowCmd = &cobra.Command{
 func init() {
 	configCmd.Flags().StringVarP(&editorFlag, "editor", "e", "", "Editor to open config file with (overrides $EDITOR)")
 	configInitCmd.Flags().BoolVarP(&force, "force", "f", false, "Force overwrite of existing config file")
+	configPruneCmd.Flags().BoolVarP(&force, "force", "f", false, "Skip interactive TUI and remove all dead paths")
 	configCmd.AddCommand(configInitCmd)
 	configCmd.AddCommand(configShowCmd)
+	configCmd.AddCommand(configPruneCmd)
 
 	rootCmd.AddCommand(configCmd)
 }
