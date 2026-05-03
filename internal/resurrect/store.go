@@ -17,7 +17,7 @@ func (s *Store) DeleteSession(name string) error {
 	for _, file := range files {
 		err := s.deleteSessionFromFile(file, name)
 		if err != nil {
-			return fmt.Errorf("delete from %s: %w", file, err)
+			return err
 		}
 	}
 	return nil

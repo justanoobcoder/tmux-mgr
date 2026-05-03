@@ -26,7 +26,7 @@ func (s *Store) ListSessions() ([]domain.SavedSession, string, error) {
 		if os.IsNotExist(err) {
 			return nil, "", nil
 		}
-		return nil, "", fmt.Errorf("open last save file: %w", err)
+		return nil, "", err
 	}
 	defer file.Close()
 

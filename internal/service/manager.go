@@ -40,7 +40,7 @@ func (m *Manager) AddProject(path string) error {
 
 	info, err := os.Stat(cleanPath)
 	if err != nil {
-		return fmt.Errorf("stat path: %w", err)
+		return err
 	}
 	if !info.IsDir() {
 		return fmt.Errorf("%w: %s", ErrNotDirectory, cleanPath)
@@ -91,7 +91,7 @@ func (m *Manager) AddFolder(path string, excludes []string) error {
 
 	info, err := os.Stat(cleanPath)
 	if err != nil {
-		return fmt.Errorf("stat path: %w", err)
+		return err
 	}
 	if !info.IsDir() {
 		return fmt.Errorf("%w: %s", ErrNotDirectory, cleanPath)
@@ -130,7 +130,7 @@ func (m *Manager) GetProjects() ([]domain.Project, error) {
 	for _, f := range m.cfg.Folders {
 		entries, err := os.ReadDir(f.Path)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("read folder %s: %w", f.Path, err))
+			errs = append(errs, err)
 			continue
 		}
 
