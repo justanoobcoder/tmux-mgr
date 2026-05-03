@@ -277,3 +277,58 @@ func (m *Manager) TrackProjectSelection(path string) error {
 	m.cfg.Scores[path]++
 	return config.Save(m.cfg)
 }
+
+func (m *Manager) GetDeadPaths() ([]string, error) {
+	var deadPaths []string
+
+	for _, p := range m.cfg.Projects {
+		if _, err := os.Stat(p); os.IsNotExist(err) {
+			deadPaths = append(deadPaths, p)
+		}
+	}
+
+	for _, f := range m.cfg.Folders {
+		if _, err := os.Stat(f.Path); os.IsNotExist(err) {
+			deadPaths = append(deadPaths, f.Path)
+		}
+	}
+
+	return deadPaths, nil
+}
+
+func (m *Manager) BulkRemoveConfigPaths(paths []string) error {
+	pathMap := make(map[string]bool)
+	for _, p := range paths {
+		pathMap[p] = true
+	}
+
+	var newProjects []string
+	for _, p := range m.cfg.Projects {
+		if !pathMap[p] {
+			newProjects = append(newProjects, p)
+		}
+	}
+	m.cfg.Projects = newProjects
+
+	var newFolders []config.FolderConfig
+	for _, f := range m.cfg.Folders {
+		if !pathMap[f.Path] {
+			newFolders = append(newFolders, f)
+		}
+	}
+	m.cfg.Folders = newFolders
+
+	if m.cfg.Scores != nil {
+		for _, p := range paths {
+			delete(m.cfg.Scores, p)
+			prefix := p + string(filepath.Separator)
+			for k := range m.cfg.Scores {
+				if strings.HasPrefix(k, prefix) {
+					delete(m.cfg.Scores, k)
+				}
+			}
+		}
+	}
+
+	return config.Save(m.cfg)
+}
