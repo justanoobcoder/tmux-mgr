@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -30,12 +31,28 @@ func addRun(cmd *cobra.Command, args []string) error {
 
 	if addFolderFlag {
 		if err := manager.AddFolder(path, addExcludeFlags); err != nil {
+			if errors.Is(err, service.ErrFolderExists) {
+				fmt.Println("Folder already exists in configuration.")
+				return nil
+			}
+			if errors.Is(err, service.ErrNotDirectory) {
+				fmt.Println("Error: The specified path is not a directory.")
+				return nil
+			}
 			return fmt.Errorf("add folder: %w", err)
 		}
 		absPath, _ := filepath.Abs(path)
 		fmt.Printf("Added folder: %s (excludes: %v)\n", filepath.Clean(absPath), addExcludeFlags)
 	} else {
 		if err := manager.AddProject(path); err != nil {
+			if errors.Is(err, service.ErrProjectExists) {
+				fmt.Println("Project already exists in configuration.")
+				return nil
+			}
+			if errors.Is(err, service.ErrNotDirectory) {
+				fmt.Println("Error: The specified path is not a directory.")
+				return nil
+			}
 			return fmt.Errorf("add project: %w", err)
 		}
 		absPath, _ := filepath.Abs(path)

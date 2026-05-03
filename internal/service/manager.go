@@ -14,6 +14,14 @@ import (
 	"github.com/justanoobcoder/tmux-mgr/internal/resurrect"
 )
 
+var (
+	ErrProjectExists   = errors.New("project already exists in config")
+	ErrFolderExists    = errors.New("folder already exists in config")
+	ErrProjectNotFound = errors.New("project not found")
+	ErrPathNotFound    = errors.New("path not found in config")
+	ErrNotDirectory    = errors.New("path is not a directory")
+)
+
 type Manager struct {
 	cfg   *config.Config
 	store *resurrect.Store
@@ -35,7 +43,7 @@ func (m *Manager) AddProject(path string) error {
 		return fmt.Errorf("stat path: %w", err)
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("path is not a directory: %s", cleanPath)
+		return fmt.Errorf("%w: %s", ErrNotDirectory, cleanPath)
 	}
 
 	for i, f := range m.cfg.Folders {
@@ -62,7 +70,7 @@ func (m *Manager) AddProject(path string) error {
 	}
 
 	if slices.Contains(m.cfg.Projects, cleanPath) {
-		return fmt.Errorf("project already exists in config")
+		return ErrProjectExists
 	}
 
 	m.cfg.Projects = append(m.cfg.Projects, cleanPath)
@@ -86,12 +94,12 @@ func (m *Manager) AddFolder(path string, excludes []string) error {
 		return fmt.Errorf("stat path: %w", err)
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("path is not a directory: %s", cleanPath)
+		return fmt.Errorf("%w: %s", ErrNotDirectory, cleanPath)
 	}
 
 	for _, f := range m.cfg.Folders {
 		if f.Path == cleanPath {
-			return fmt.Errorf("folder already exists in config")
+			return ErrFolderExists
 		}
 	}
 
@@ -200,7 +208,7 @@ func (m *Manager) RemoveProject(path string) error {
 	}
 
 	if !removed {
-		return fmt.Errorf("project not found")
+		return ErrProjectNotFound
 	}
 
 	if m.cfg.Scores != nil {
@@ -243,7 +251,7 @@ func (m *Manager) RemoveConfigPath(path string) error {
 	m.cfg.Folders = newFolders
 
 	if !removed {
-		return fmt.Errorf("path not found in config: %s", cleanPath)
+		return fmt.Errorf("%w: %s", ErrPathNotFound, cleanPath)
 	}
 
 	if m.cfg.Scores != nil {

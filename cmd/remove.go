@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/justanoobcoder/tmux-mgr/internal/service"
@@ -17,6 +18,10 @@ func removeRun(cmd *cobra.Command, args []string) error {
 
 	path := args[0]
 	if err := manager.RemoveConfigPath(path); err != nil {
+		if errors.Is(err, service.ErrPathNotFound) {
+			fmt.Printf("Path '%s' not found in configuration.\n", path)
+			return nil
+		}
 		return fmt.Errorf("remove path: %w", err)
 	}
 
