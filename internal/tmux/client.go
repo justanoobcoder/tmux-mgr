@@ -46,7 +46,12 @@ func (c *Client) Attach(sessionName string) error {
 		return fmt.Errorf("find tmux: %w", err)
 	}
 
-	args := []string{"tmux", "attach-session", "-t", sessionName}
+	var args []string
+	if os.Getenv("TMUX") != "" {
+		args = []string{"tmux", "switch-client", "-t", sessionName}
+	} else {
+		args = []string{"tmux", "attach-session", "-t", sessionName}
+	}
 
 	return syscall.Exec(tmuxPath, args, cleanEnv())
 }
