@@ -131,8 +131,8 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           go build \
-            -ldflags "-s -w -X github.com/justanoobcoder/tmux-mgr/cmd.version=${{ needs.create_release.outputs.new_tag }}" \
-            -o "tmux-mgr-${{ needs.create_release.outputs.new_tag }}-${{ matrix.goos }}-${{ matrix.goarch }}" \
+            -ldflags "-s -w -X github.com/justanoobcoder/tmux-mgr/cmd.version=${{ needs.create-release.outputs.new_tag }}" \
+            -o "tmux-mgr-${{ needs.create-release.outputs.new_tag }}-${{ matrix.goos }}-${{ matrix.goarch }}" \
             .
 
       - name: Upload to Release
