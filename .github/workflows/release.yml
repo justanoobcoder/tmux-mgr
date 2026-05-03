@@ -24,6 +24,7 @@ jobs:
 
       - name: Get bump label
         id: bump_label
+        if: github.event_name == 'pull_request'
         uses: SamirMarin/get-labels-action@v0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -36,7 +37,7 @@ jobs:
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: ${{ steps.bump_label.outputs.label_value }}
+          default_bump: ${{ github.event_name == 'pull_request' && steps.bump_label.outputs.label_value || 'patch' }}
           dry_run: ${{ github.event_name == 'pull_request' }}
           tag_prefix: v
 
