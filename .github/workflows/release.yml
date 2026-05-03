@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and release
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          OUTPUT="tmux-mgr-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          go build \
+            -ldflags "-s -w -X github.com/justanoobcoder/tmux-mgr/cmd.version=${{ github.ref_name }}" \
+            -o "$OUTPUT" \
+            .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tmux-mgr-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: tmux-mgr-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
+
+  publish:
+    name: Publish GitHub release
+    runs-on: ubuntu-latest
+    needs: release
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/*
