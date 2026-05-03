@@ -24,20 +24,31 @@ jobs:
 
       - name: Get bump label
         id: bump_label
-        if: github.event_name == 'pull_request'
-        uses: SamirMarin/get-labels-action@v0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          label_key: bump
-          label_value_order: "patch,minor,major,ignore"
-          default_label_value: patch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # On PR: read labels directly from the event payload
+            LABEL=$(echo '${{ toJson(github.event.pull_request.labels.*.name) }}' \
+              | jq -r '.[] | select(startswith("bump:")) | ltrimstr("bump:")' | head -1)
+          else
+            # On push to main after merge: look up the PR by the merge commit SHA
+            PR_NUMBER=$(gh pr list --state merged --base main \
+              --json number,mergeCommit \
+              --jq ".[] | select(.mergeCommit.oid == \"${{ github.sha }}\") | .number")
+            if [ -n "$PR_NUMBER" ]; then
+              LABEL=$(gh pr view "$PR_NUMBER" --json labels \
+                --jq '.labels[].name | select(startswith("bump:")) | ltrimstr("bump:")' | head -1)
+            fi
+          fi
+          echo "label_value=${LABEL:-patch}" >> "$GITHUB_OUTPUT"
 
       - name: Create tag
         id: tag_version
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: ${{ github.event_name == 'pull_request' && steps.bump_label.outputs.label_value || 'patch' }}
+          default_bump: ${{ steps.bump_label.outputs.label_value }}
           dry_run: ${{ github.event_name == 'pull_request' }}
           tag_prefix: v
 
