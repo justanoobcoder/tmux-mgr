@@ -20,7 +20,9 @@ cd tmux-mgr
 go build .
 ```
 Then copy the binary to your `$PATH`.
-Or download the binary file 
+
+Or download the binary file from the [releases page](https://github.com/justanoobcoder/tmux-mgr/releases). Remember to run `chmod +x <binary_file>` to make it executable.
+Note: the binaries are compiled from source by GitHub Actions.
 
 ## Dependencies
 - `tmux` must be installed and available in your `$PATH`.
