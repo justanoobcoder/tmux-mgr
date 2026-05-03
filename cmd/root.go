@@ -8,15 +8,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var tmuxNotRequired = map[string]bool{
+	"version":    true,
+	"help":       true,
+	"completion": true,
+}
+
 func rootRun(cmd *cobra.Command, args []string) error {
 	return projectsRun(cmd, args)
 }
 
-func checkTmuxInstalled(cmd *cobra.Command, args []string) {
-	_, err := exec.LookPath("tmuxs")
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "tmux is not installed, please install it before using tmux-mgr.")
-		os.Exit(1)
+func checkTmuxInstallRun(cmd *cobra.Command, args []string) {
+	if !tmuxNotRequired[cmd.Name()] {
+		if _, err := exec.LookPath("tmux"); err != nil {
+			fmt.Fprintln(os.Stderr, "tmux is not installed or not found in $PATH")
+			os.Exit(1)
+		}
 	}
 }
 
@@ -25,7 +32,7 @@ var rootCmd = &cobra.Command{
 	Short: "A CLI/TUI to manage tmux sessions and projects",
 	Long: `tmux-mgr is a tmux session manager that automates how you create and attach to tmux sessions.
 It replaces manual commands with a clean terminal interface for faster navigation.`,
-	PersistentPreRun: checkTmuxInstalled,
+	PersistentPreRun: checkTmuxInstallRun,
 	RunE:             rootRun,
 }
 
