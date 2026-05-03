@@ -64,6 +64,12 @@ tmux-mgr
 * **`tmux-mgr config show`**
   Show configuration content.
 
+* **`tmux-mgr config prune`**
+  Identify and remove old non-existent paths from your configuration.
+
+* **`tmux-mgr help`**
+  Show help.
+
 ### TUI Keybindings
 
 While in the `projects` or `sessions` interface:
