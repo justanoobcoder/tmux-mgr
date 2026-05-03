@@ -62,18 +62,14 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	viper.AddConfigPath(configPath)
-	viper.SetConfigName("config")
-	viper.SetConfigType("json")
+	viper.SetConfigFile(configPath)
 
 	viper.SetDefault("tmux.attach_on_create", true)
 	viper.SetDefault("resurrect.enabled", true)
 	viper.SetDefault("resurrect.save_dir", saveDir)
 
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, fmt.Errorf("read config: %w", err)
-		}
+		return nil, fmt.Errorf("read config: %w", err)
 	}
 
 	var cfg Config
