@@ -1,62 +1,108 @@
 name: Release
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
-    types: [opened, labeled, unlabeled, reopened]
     branches:
       - main
-
+    types:
+      - opened
+      - synchronize
+      - labeled
+      - unlabeled
 permissions:
   contents: write
 
 jobs:
-  version:
-    name: Determine version
+  create-release:
+    name: Create Release Tag
     runs-on: ubuntu-latest
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'bump:major') ||
+      contains(github.event.pull_request.labels.*.name, 'bump:minor') ||
+      contains(github.event.pull_request.labels.*.name, 'bump:patch')
     outputs:
-      new_tag: ${{ steps.tag_version.outputs.new_tag }}
-      changelog: ${{ steps.tag_version.outputs.changelog }}
+      new_tag: ${{ steps.bump.outputs.new_tag }}
+      release_id: ${{ steps.create_release.outputs.id }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v6
-
-      - name: Get bump label
-        id: bump_label
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            # On PR: read labels directly from the event payload
-            LABEL=$(echo '${{ toJson(github.event.pull_request.labels.*.name) }}' \
-              | jq -r '.[] | select(startswith("bump:")) | ltrimstr("bump:")' | head -1)
-          else
-            # On push to main after merge: look up the PR by the merge commit SHA
-            PR_NUMBER=$(gh pr list --state merged --base main \
-              --json number,mergeCommit \
-              --jq ".[] | select(.mergeCommit.oid == \"${{ github.sha }}\") | .number")
-            if [ -n "$PR_NUMBER" ]; then
-              LABEL=$(gh pr view "$PR_NUMBER" --json labels \
-                --jq '.labels[].name | select(startswith("bump:")) | ltrimstr("bump:")' | head -1)
-            fi
-          fi
-          echo "label_value=${LABEL:-patch}" >> "$GITHUB_OUTPUT"
-
-      - name: Create tag
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: ${{ steps.bump_label.outputs.label_value }}
-          dry_run: ${{ github.event_name == 'pull_request' }}
-          tag_prefix: v
+          fetch-depth: 0
+
+      - name: Detect bump type
+        id: detect
+        run: |
+          LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+          echo "Labels: $LABELS"
+
+          if echo "$LABELS" | grep -q 'bump:major'; then
+            echo "bump_type=major" >> $GITHUB_OUTPUT
+          elif echo "$LABELS" | grep -q 'bump:minor'; then
+            echo "bump_type=minor" >> $GITHUB_OUTPUT
+          elif echo "$LABELS" | grep -q 'bump:patch'; then
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Calculate new version tag
+        id: bump
+        run: |
+          BUMP_TYPE="${{ steps.detect.outputs.bump_type }}"
+
+          # Lấy tag mới nhất dạng vX.Y.Z, mặc định v0.0.0 nếu chưa có
+          LATEST_TAG=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' \
+            | sort -V | tail -n1)
+          LATEST_TAG=${LATEST_TAG:-v0.0.0}
+          echo "Latest tag: $LATEST_TAG"
+
+          # Tách major.minor.patch
+          VERSION=${LATEST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+          # Tăng version
+          case "$BUMP_TYPE" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "New tag: $NEW_TAG"
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+      - name: Push new tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.bump.outputs.new_tag }} ${{ github.event.pull_request.head.sha }}
+          git push origin ${{ steps.bump.outputs.new_tag }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.bump.outputs.new_tag }}
+          name: ${{ steps.bump.outputs.new_tag }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
-    needs: version
-    if: github.event_name == 'push'
+    needs: create-release
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -85,32 +131,14 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           go build \
-            -ldflags "-s -w -X github.com/justanoobcoder/tmux-mgr/cmd.version=${{ needs.version.outputs.new_tag }}" \
-            -o "tmux-mgr-${{ needs.version.outputs.new_tag }}-${{ matrix.goos }}-${{ matrix.goarch }}" \
+            -ldflags "-s -w -X github.com/justanoobcoder/tmux-mgr/cmd.version=${{ needs.create_release.outputs.new_tag }}" \
+            -o "tmux-mgr-${{ needs.create_release.outputs.new_tag }}-${{ matrix.goos }}-${{ matrix.goarch }}" \
             .
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: tmux-mgr-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: tmux-mgr-${{ needs.version.outputs.new_tag }}-${{ matrix.goos }}-${{ matrix.goarch }}
-
-  release:
-    name: Publish release
-    needs: [version, build]
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: dist/
-          merge-multiple: true
-
-      - name: Create GitHub release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ needs.version.outputs.new_tag }}
-          name: {{ needs.version.outputs.new_tag }}
-          generateReleaseNotes: true
-          artifacts: "dist/*"
+          tag_name: ${{ needs.create-release.outputs.new_tag }}
+          files: tmux-mgr-${{ needs.create-release.outputs.new_tag }}-${{ matrix.goos }}-${{ matrix.goarch }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
