@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -152,7 +153,7 @@ func (m *Manager) GetProjects() ([]domain.Project, error) {
 	})
 
 	if len(errs) > 0 {
-		return projects, fmt.Errorf("some folders could not be read: %v", errs)
+		return projects, fmt.Errorf("some folders could not be read: %w", errors.Join(errs...))
 	}
 
 	return projects, nil

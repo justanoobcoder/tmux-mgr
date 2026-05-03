@@ -35,7 +35,7 @@ func (c *Client) Run(args ...string) (string, error) {
 
 	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("tmux error: %v, stderr: %s", err, stderr.String())
+		return "", fmt.Errorf("tmux error: %w, stderr: %s", err, stderr.String())
 	}
 	return out.String(), nil
 }
