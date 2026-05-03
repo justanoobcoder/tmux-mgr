@@ -110,6 +110,6 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ needs.version.outputs.new_tag }}
-          name: Release ${{ needs.version.outputs.new_tag }}
+          name: {{ needs.version.outputs.new_tag }}
           generateReleaseNotes: true
           artifacts: "dist/*"
